@@ -1,0 +1,29 @@
+[
+    {
+      "id": 1,
+      "code": "COMP2711",
+      "title": "Advanced Programming",
+      "professor": "Prof. Leung",
+      "icon": "comp",
+      "schedule": "Mon 10:00-12:00",
+      "location": "Room 402"
+    },
+    {
+      "id": 2,
+      "code": "COMP3711",
+      "title": "Artificial Intelligence",
+      "professor": "Prof. Chan",
+      "icon": "comp",
+      "schedule": "Wed 14:00-16:00",
+      "location": "Lab 3"
+    },
+    {
+      "id": 3,
+      "code": "MATH2111",
+      "title": "Linear Algebra",
+      "professor": "Prof. Wong",
+      "icon": "cal",
+      "schedule": "Fri 09:00-11:00",
+      "location": "Room 201"
+    }
+  ]
