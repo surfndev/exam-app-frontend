@@ -10,7 +10,13 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.surfndev.watch4u"
+      "bundleIdentifier": "com.surfndev.watch4u",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app needs access to your camera to scan QR codes and take photos",
+        "NSPhotoLibraryUsageDescription": "This app needs access to your photo library to save and share photos",
+        "NSPhotoLibraryAddUsageDescription": "This app needs access to your photo library to save photos",
+        "NSMicrophoneUsageDescription": "This app needs access to your microphone for video recording"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -38,7 +44,15 @@
           "backgroundColor": "#ffffff"
         }
       ],
-      "react-native-nfc-manager"
+      "react-native-nfc-manager",
+      [
+      "expo-camera",
+        {
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera",
+          "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone",
+          "recordAudioAndroid": true
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
