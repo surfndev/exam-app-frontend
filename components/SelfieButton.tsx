@@ -74,106 +74,113 @@ export const SelfieButton = ({
 
   const takePicture = async () => {
     if (cameraRef.current) {
-      try {
-        const photo = await cameraRef.current.takePictureAsync({
-          quality: 0.7,
-          base64: true,
-        });
-  
-        if (!photo || !photo.uri) {
-          throw new Error('Failed to capture photo.');
+        try {
+            const photo = await cameraRef.current.takePictureAsync({
+                quality: 0.7,
+                exif: false,
+            });
+
+            if (!photo || !photo.uri) {
+                throw new Error('Failed to capture photo.');
+            }
+
+            // Process the image to ensure it's not too large
+            const processedImage = await manipulateAsync(
+                photo.uri,
+                [{ resize: { width: 800 } }], // Resize to a reasonable size
+                { 
+                    compress: 0.7,
+                    format: SaveFormat.JPEG,
+                }
+            );
+
+            setCapturedImage(processedImage.uri);
+            setShowCamera(false);
+            setShowConfirmation(true);
+        } catch (error) {
+            handleError(error as Error);
+        } finally {
+            setIsLoading(false);
         }
-  
-        const processedImage = await manipulateAsync(
-          photo.uri,
-          [{ resize: { width: 500 } }],
-          { compress: 0.7, format: SaveFormat.JPEG }
-        );
-  
-        setCapturedImage(processedImage.uri);
-        setShowCamera(false);
-        setShowConfirmation(true);
-      } catch (error) {
-        handleError(error as Error);
-      } finally {
-        setIsLoading(false);
-      }
     }
-  };
+};
 
   const handleConfirm = async () => {
-    if (!capturedImage) return;
+    if (!capturedImage || !userId) return;
     
     setIsLoading(true);
     try {
-      // Get token from storage
-      const token = await AsyncStorage.getItem('token');
-      
-      // First API call - NFC verification
-      const nfcResponse = await fetch(createApiUrl(`/exam/${examId}/nfc`), {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          user_id: userId,
-          tag_serial_number: tagSerialNumber,
-        }),
-      });
-  
-      if (!nfcResponse.ok) {
-        throw new Error('Failed to verify NFC');
-      }
-  
-      // Convert image to base64 if it isn't already
-      let base64Image = '';
-      if (capturedImage.startsWith('data:image')) {
-        base64Image = capturedImage.split(',')[1];
-      } else {
-        const response = await fetch(capturedImage);
-        const blob = await response.blob();
-        base64Image = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => {
-            const base64String = reader.result as string;
-            resolve(base64String.split(',')[1]);
-          };
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
+        // Get token from storage
+        const token = await AsyncStorage.getItem('token');
+        
+        // First API call - NFC verification
+        const nfcResponse = await fetch(createApiUrl(`/exam/${examId}/nfc`), {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+                user_id: userId,
+                tag_serial_number: tagSerialNumber,
+            }),
         });
-      }
-  
-      // Second API call - Upload image
-      const imageResponse = await fetch(createApiUrl(`/exam/${examId}/upload_image`), {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          user_id: userId,
-          image: base64Image,
-        }),
-      });
-  
-      if (!imageResponse.ok) {
-        throw new Error('Failed to upload image');
-      }
-  
-      // If both calls are successful
-      setIsVerified(true);
-      onVerificationComplete(capturedImage);
-      setShowConfirmation(false);
-  
+
+        if (!nfcResponse.ok) {
+            throw new Error('Failed to verify NFC');
+        }
+
+        // Create FormData instance
+        const formData = new FormData();
+
+        // Add the image
+        // Get the filename from the URI
+        const filename = capturedImage.split('/').pop() || 'photo.jpg';
+        
+        // Determine the file type
+        const match = /\.(\w+)$/.exec(filename.toLowerCase());
+        const type = match ? `image/${match[1]}` : 'image/jpeg';
+
+        // Append the image to FormData
+        formData.append('image', {
+            uri: capturedImage,
+            name: filename,
+            type: type,
+        } as any);
+
+        // Add user_id
+        formData.append('user_id', userId);
+
+        // Second API call - Upload image using FormData
+        const imageResponse = await fetch(createApiUrl(`/exam/${examId}/upload_image`), {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                // Don't set Content-Type, it will be set automatically with boundary
+            },
+            body: formData,
+        });
+
+        if (!imageResponse.ok) {
+            // Log the error response
+            const errorText = await imageResponse.text();
+            console.error('Image upload failed:', errorText);
+            throw new Error('Failed to upload image');
+        }
+
+        // If both calls are successful
+        setIsVerified(true);
+        onVerificationComplete(capturedImage);
+        setShowConfirmation(false);
+
     } catch (error) {
-      handleError(error as Error);
+        handleError(error as Error);
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
-  };
+};
   
   const handleRetake = () => {
     setCapturedImage(null);
