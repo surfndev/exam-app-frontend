@@ -8,6 +8,10 @@ import { router } from 'expo-router'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { API_CONFIG, createApiUrl } from '@/config'
 
+
+//const BASE_URL = 'http://192.168.0.101:8000'
+//const API_URL = `${BASE_URL}/api/v1`
+
 interface LoginResponse {
   error: string
   token: string;
@@ -32,18 +36,7 @@ const SignIn = () => {
     setIsSubmitting(true);
 
     try {
-      // Log the API URL and request body for debugging
-      const apiUrl = createApiUrl('login');
-      console.log('API Request URL:', apiUrl);
-      console.log('Request Body:', JSON.stringify({
-        email: form.email,
-        password: form.password,
-      }));
-      
-      // Log network info
-      console.log('Making API request...');
-      
-      const loginResponse = await fetch(apiUrl, {
+      const loginResponse = await fetch(createApiUrl('login'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -53,12 +46,8 @@ const SignIn = () => {
           password: form.password,
         }),
       });
-      
-      console.log('Response status:', loginResponse.status);
-      console.log('Response headers:', loginResponse.headers);
-      
+
       const loginData = await loginResponse.json() as LoginResponse;
-      console.log('Response data:', loginData);
 
       if (!loginResponse.ok || !loginData.token) {
         throw new Error(loginData.error || 'Login failed');
@@ -71,23 +60,19 @@ const SignIn = () => {
         ['user_role', loginData.role.toString()],
       ]);
 
-      router.push('/(tabs)/home');
+      // Route based on role (0 is student, other numbers are different admin roles)
+      if (loginData.role === 0) {
+        console.log('Routing to student home', loginData.role);
+        router.push('/(tabs)/home');
+      } else {
+        console.log('Routing to admin home with role:', loginData.role);
+        router.push('/(admin)/exams');
+      }
+
+      //router.push('/(tabs)/home');
 
     } catch (error) {
       console.error('Login process error:', error);
-      
-      // Add more detailed error logging
-      if (error instanceof TypeError && error.message === 'Network request failed') {
-        console.log('Network request failed. This may be due to:');
-        console.log('1. Incorrect API URL or server is not running');
-        console.log('2. The device is not connected to the internet');
-        console.log('3. Running on an emulator that cannot access localhost');
-        console.log('4. CORS issues (if using a web browser)');
-        
-        // Check if running in Expo Go
-        console.log('Running in Expo environment:', __DEV__ ? 'Yes (Development)' : 'No (Production)');
-      }
-      
       Alert.alert(
         'Error',
         error instanceof Error 
@@ -137,22 +122,6 @@ const SignIn = () => {
             textStyles={undefined} 
             isLoading={isSubmitting}
           />
-          
-          {/* Debug button to test API connectivity */}
-          {__DEV__ && (
-            <CustomButton 
-              title="Test API Connection"
-              handlePress={() => {
-                console.log('Testing API connection to:', createApiUrl(''));
-                fetch(createApiUrl(''))
-                  .then(res => console.log('API Test connection successful:', res.status))
-                  .catch(err => console.log('API Test connection failed:', err));
-              }} 
-              containerStyles='mt-3 bg-gray-500' 
-              textStyles={undefined} 
-              isLoading={false}
-            />
-          )}
         </View>
       </ScrollView>
     </SafeAreaView>

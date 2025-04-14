@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createApiUrl } from '@/config';
+import * as FileSystem from 'expo-file-system';
 
 type SelfieButtonProps = {
   isActive: boolean;
@@ -72,6 +73,9 @@ export const SelfieButton = ({
     }
   };
 
+  const baseDir = FileSystem.documentDirectory;
+  const imagesDir = `${baseDir}m/images`;
+
   const takePicture = async () => {
     if (cameraRef.current) {
         try {
@@ -93,6 +97,34 @@ export const SelfieButton = ({
                     format: SaveFormat.JPEG,
                 }
             );
+            // Create a directory for your images if it doesn't exist
+            
+
+            
+            const mDir = `${baseDir}m`;
+            const mDirInfo = await FileSystem.getInfoAsync(mDir);
+            if (!mDirInfo.exists) {
+                await FileSystem.makeDirectoryAsync(mDir, { intermediates: true });
+            }
+
+            // Then create the /m/images directory
+            const imagesDirInfo = await FileSystem.getInfoAsync(imagesDir);
+            if (!imagesDirInfo.exists) {
+                await FileSystem.makeDirectoryAsync(imagesDir, { intermediates: true });
+            }
+
+            // Create a unique filename
+            const filename = `selfie_${Date.now()}.png`;
+            const filePath = `${imagesDir}/${filename}`;
+
+            // Copy the image to /m/images
+            await FileSystem.copyAsync({
+                from: processedImage.uri,
+                to: filePath
+            });
+
+            console.log('Image saved to:', filePath);
+            console.log('Image directory structure:', imagesDir);
 
             setCapturedImage(processedImage.uri);
             setShowCamera(false);
@@ -113,18 +145,25 @@ export const SelfieButton = ({
         // Get token from storage
         const token = await AsyncStorage.getItem('token');
         
-        // First API call - NFC verification
-        const nfcResponse = await fetch(createApiUrl(`/exam/${examId}/nfc`), {
+        const nfcApiUrl = createApiUrl(`/exam/${examId}/nfc`);
+        console.log('NFC API URL:', nfcApiUrl);
+        
+        const nfcRequestBody = {
+            user_id: userId,
+            tag_serial_number: tagSerialNumber,
+        };
+        console.log('NFC Request Body:', nfcRequestBody);
+        
+        console.log('Authorization Token:', token);
+        
+        const nfcResponse = await fetch(nfcApiUrl, {
             method: 'POST',
             headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`,
             },
-            body: JSON.stringify({
-                user_id: userId,
-                tag_serial_number: tagSerialNumber,
-            }),
+            body: JSON.stringify(nfcRequestBody),
         });
 
         if (!nfcResponse.ok) {
@@ -134,52 +173,50 @@ export const SelfieButton = ({
         // Create FormData instance
         const formData = new FormData();
 
-        // Add the image
-        // Get the filename from the URI
-        const filename = capturedImage.split('/').pop() || 'photo.jpg';
+       // Get the filename from the URI
+       const filename = capturedImage.split('/').pop() || 'photo.jpg';
         
-        // Determine the file type
-        const match = /\.(\w+)$/.exec(filename.toLowerCase());
-        const type = match ? `image/${match[1]}` : 'image/jpeg';
+       // Append the image to FormData
+       formData.append('image', {
+           uri: capturedImage,
+           name: filename,
+           type: 'image/jpeg'
+       } as any);
 
-        // Append the image to FormData
-        formData.append('image', {
-            uri: capturedImage,
-            name: filename,
-            type: type,
-        } as any);
+       formData.append('user_id', userId);
 
-        // Add user_id
-        formData.append('user_id', userId);
+       // Upload image to your Laravel endpoint
+       const imageResponse = await fetch(createApiUrl(`/exam/${examId}/upload_image`), {
+           method: 'POST',
+           headers: {
+               'Accept': 'application/json',
+               'Authorization': `Bearer ${token}`,
+           },
+           body: formData,
+       });
 
-        // Second API call - Upload image using FormData
-        const imageResponse = await fetch(createApiUrl(`/exam/${examId}/upload_image`), {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'Authorization': `Bearer ${token}`,
-                // Don't set Content-Type, it will be set automatically with boundary
-            },
-            body: formData,
-        });
+       if (!imageResponse.ok) {
+           throw new Error('Failed to upload image');
+       }
 
-        if (!imageResponse.ok) {
-            // Log the error response
-            const errorText = await imageResponse.text();
-            console.error('Image upload failed:', errorText);
-            throw new Error('Failed to upload image');
-        }
+       // Get the response which should include the image path
+       const responseData = await imageResponse.json();
+       console.log('Image uploaded, server path:', responseData.image_path);
+       
+       // The image URL would be something like:
+       // http://192.168.0.101:8000/m/images/[generated-uuid].jpg
+       const imageUrl = responseData.image_url; // Assuming your server returns this
 
-        // If both calls are successful
-        setIsVerified(true);
-        onVerificationComplete(capturedImage);
-        setShowConfirmation(false);
+       // Store or use the image URL as needed
+       setIsVerified(true);
+       onVerificationComplete(imageUrl);
+       setShowConfirmation(false);
 
-    } catch (error) {
-        handleError(error as Error);
-    } finally {
-        setIsLoading(false);
-    }
+   } catch (error) {
+       handleError(error as Error);
+   } finally {
+       setIsLoading(false);
+   }
 };
   
   const handleRetake = () => {
