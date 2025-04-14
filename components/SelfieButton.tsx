@@ -170,6 +170,7 @@ export const SelfieButton = ({
             throw new Error('Failed to verify NFC');
         }
 
+        //here
         // Create FormData instance
         const formData = new FormData();
 

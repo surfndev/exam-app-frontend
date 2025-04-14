@@ -15,7 +15,7 @@ const Profile = () => {
     <SafeAreaView className="flex-1 bg-primary" edges={['top']}>
       <Stack.Screen 
         options={{
-          headerTitle: 'My Profile',
+          headerTitle: () => <Text>My Profile</Text>,
           headerTitleAlign: 'center',
           headerStyle: { backgroundColor: '#F2F2F2' },
           headerTintColor: 'black',
@@ -23,7 +23,6 @@ const Profile = () => {
       />
 
       <ScrollView className="flex-1">
-        {/* Student Info Section - Fixed width items */}
         <View className="bg-white p-6 rounded-b-3xl shadow-sm">
           <View className="items-center mb-4">
             <View className="w-24 h-24 bg-secondary rounded-full justify-center items-center mb-3">
@@ -34,7 +33,7 @@ const Profile = () => {
           </View>
 
           <View className="flex-row justify-between border-t border-gray-100 pt-4">
-            <View className="items-center flex-1 min-w-0 px-2"> {/* Added flex constraints */}
+            <View className="items-center flex-1 min-w-0 px-2">
               <Text className="font-pmedium">Faculty</Text>
               <Text 
                 className="text-gray-600 text-center" 
@@ -45,9 +44,9 @@ const Profile = () => {
               </Text>
             </View>
             
-            <View className="w-px bg-gray-200 mx-2" /> {/* Divider line */}
+            <View className="w-px bg-gray-200 mx-2" />
             
-            <View className="items-center flex-1 min-w-0 px-2"> {/* Added flex constraints */}
+            <View className="items-center flex-1 min-w-0 px-2">
               <Text className="font-pmedium">Program</Text>
               <Text 
                 className="text-gray-600 text-center" 
@@ -60,14 +59,12 @@ const Profile = () => {
           </View>
         </View>
 
-        {/* Check-in Log Section */}
         <View className="p-6">
           <Text className="text-lg font-psemibold mb-4">Recent Check-ins</Text>
           <CheckInLog checkIns={mockCheckIns} />
         </View>
       </ScrollView>
 
-      {/* Logout Button */}
       <View className="p-6 bg-white border-t border-gray-100">
         <TouchableOpacity
           onPress={handleLogout}
