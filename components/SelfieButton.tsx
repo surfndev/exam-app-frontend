@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createApiUrl } from '@/config';
 import * as FileSystem from 'expo-file-system';
 
+
 type SelfieButtonProps = {
   isActive: boolean;
   examId: string;
@@ -171,46 +172,55 @@ export const SelfieButton = ({
         }
 
         //here
-        // Create FormData instance
-        const formData = new FormData();
+        const optimizedImage = await manipulateAsync(
+          capturedImage,
+          [{ resize: { width: 1080 } }], // Resize to reasonable dimensions
+          { compress: 0.7, format: SaveFormat.JPEG } // Compress quality
+      );
 
-       // Get the filename from the URI
-       const filename = capturedImage.split('/').pop() || 'photo.jpg';
-        
-       // Append the image to FormData
-       formData.append('image', {
-           uri: capturedImage,
-           name: filename,
-           type: 'image/jpeg'
-       } as any);
+      // Create FormData instance
+      const formData = new FormData();
 
-       formData.append('user_id', userId);
+      // Get the filename from the URI
+      const filename = optimizedImage.uri.split('/').pop() || 'photo.jpg';
+      
+      // Append the image to FormData with proper typing
+      formData.append('image', {
+          uri: optimizedImage.uri,
+          name: filename,
+          type: 'image/jpeg',
+      } as any);
 
-       // Upload image to your Laravel endpoint
-       const imageResponse = await fetch(createApiUrl(`/exam/${examId}/upload_image`), {
-           method: 'POST',
-           headers: {
-               'Accept': 'application/json',
-               'Authorization': `Bearer ${token}`,
-           },
-           body: formData,
-       });
+      formData.append('user_id', userId);
 
-       if (!imageResponse.ok) {
-           throw new Error('Failed to upload image');
-       }
+      // Upload image
+      const response = await fetch(
+          createApiUrl(`/exam/${examId}/upload_image`), 
+          {
+              method: 'POST',
+              headers: {
+                  'Accept': 'application/json',
+                  'Authorization': `Bearer ${token}`,
+                  // Note: Don't set Content-Type header, it's automatically set by FormData
+              },
+              body: formData,
+          }
+      );
 
-       // Get the response which should include the image path
-       const responseData = await imageResponse.json();
-       console.log('Image uploaded, server path:', responseData.image_path);
-       
-       // The image URL would be something like:
-       // http://192.168.0.101:8000/m/images/[generated-uuid].jpg
-       const imageUrl = responseData.image_url; // Assuming your server returns this
+      // Check for HTTP errors
+      if (!response.ok) {
+          const errorData = await response.json().catch(() => null);
+          throw new Error(
+              errorData?.message || 
+              `Upload failed with status: ${response.status}`
+          );
+      }
 
+      const responseData = await response.json();
+      console.log('Upload successful:', responseData);
        // Store or use the image URL as needed
        setIsVerified(true);
-       onVerificationComplete(imageUrl);
+       onVerificationComplete(responseData.image_url);
        setShowConfirmation(false);
 
    } catch (error) {

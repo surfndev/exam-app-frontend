@@ -16,7 +16,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated'
 import { PanGestureHandler } from 'react-native-gesture-handler'
-
+import {createApiUrl} from '@/config'
 
 const BASE_URL = 'http://192.168.0.101:8000'
 const API_URL = `${BASE_URL}/api/v1`
@@ -174,7 +174,7 @@ const SeatingPlan = () => {
       
       if (!token) throw new Error('No token found');
   
-      const url = `${API_URL}/exam/${params.id}/user_list`;
+      const url = createApiUrl(`/exam/${params.id}/user_list`);
       console.log('Fetching from URL:', url); // Debug log
   
       const response = await fetch(url, {
@@ -232,7 +232,7 @@ const SeatingPlan = () => {
       const token = await AsyncStorage.getItem('token');
       if (!token) throw new Error('No token found');
 
-      const response = await fetch(`${API_URL}/exam/${params.id}/set_tag`, {
+      const response = await fetch(createApiUrl(`/exam/${params.id}/set_tag`), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
