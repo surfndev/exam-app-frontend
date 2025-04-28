@@ -1,79 +1,181 @@
-import { mockCheckIns } from '@/assets/data/mockCheckIns';
-import CheckInLog from '@/components/CheckInLog';
-import { Ionicons } from '@expo/vector-icons';
-import { Stack, router } from 'expo-router';
-import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router } from 'expo-router';
+import { UserCircle, Mail, User2, LogOut, Badge } from 'lucide-react-native';
+import AntDesign from '@expo/vector-icons/AntDesign';
+import Entypo from '@expo/vector-icons/Entypo';
+import { createApiUrl } from '@/config';
+
+interface UserData {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: number;
+  status: number;
+}
+
+// Default user data to handle undefined cases
+const defaultUserData: UserData = {
+  id: '',
+  email: '',
+  first_name: '',
+  last_name: '',
+  role: 0,
+  status: 0,
+};
+
+const ProfileCard = ({ icon, title, value }: { icon: React.ReactNode, title: string, value: string }) => (
+  <View className="flex-row items-center bg-gray-50 p-4 rounded-xl mb-4">
+    {icon}
+    <View className="ml-4">
+      <Text className="text-gray-500 text-sm">{title}</Text>
+      <Text className="text-black font-semibold text-base mt-1">{value}</Text>
+    </View>
+  </View>
+);
 
 const Profile = () => {
-  const handleLogout = () => {
-    router.replace('/(auth)/sign-in');
+  const [userData, setUserData] = useState<UserData>(defaultUserData);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchUserData();
+  }, []);
+
+  const fetchUserData = async () => {
+    try {
+      const userId = await AsyncStorage.getItem('user_id');
+      const token = await AsyncStorage.getItem('token');
+
+      if (!userId || !token) {
+        router.replace('/sign-in');
+        return;
+      }
+
+      const response = await fetch(createApiUrl(`user/${userId}`), {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          await handleLogout();
+          return;
+        }
+        throw new Error('Failed to fetch user data');
+      }
+
+      const data = await response.json();
+      setUserData(data[0] || defaultUserData);
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      Alert.alert('Error', 'Failed to load user information');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  return (
-    <SafeAreaView className="flex-1 bg-primary" edges={['top']}>
-      <Stack.Screen 
-        options={{
-          headerTitle: () => <Text>My Profile</Text>,
-          headerTitleAlign: 'center',
-          headerStyle: { backgroundColor: '#F2F2F2' },
-          headerTintColor: 'black',
-        }} 
-      />
+  const handleLogout = async () => {
+    try {
+      await AsyncStorage.multiRemove(['token', 'user_id', 'user_role']);
+      router.replace('/sign-in');
+    } catch (error) {
+      console.error('Logout error:', error);
+      Alert.alert('Error', 'Failed to logout');
+    }
+  };
 
-      <ScrollView className="flex-1">
-        <View className="bg-white p-6 rounded-b-3xl shadow-sm">
-          <View className="items-center mb-4">
-            <View className="w-24 h-24 bg-secondary rounded-full justify-center items-center mb-3">
-              <Ionicons name="person" size={40} color="white" />
-            </View>
-            <Text className="text-xl font-psemibold">John Doe</Text>
-            <Text className="text-gray-600">ID: 12345678</Text>
-          </View>
+  const showLogoutConfirmation = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Logout', onPress: handleLogout, style: 'destructive' }
+      ]
+    );
+  };
 
-          <View className="flex-row justify-between border-t border-gray-100 pt-4">
-            <View className="items-center flex-1 min-w-0 px-2">
-              <Text className="font-pmedium">Faculty</Text>
-              <Text 
-                className="text-gray-600 text-center" 
-                numberOfLines={1} 
-                ellipsizeMode="tail"
-              >
-                CSE
-              </Text>
-            </View>
-            
-            <View className="w-px bg-gray-200 mx-2" />
-            
-            <View className="items-center flex-1 min-w-0 px-2">
-              <Text className="font-pmedium">Program</Text>
-              <Text 
-                className="text-gray-600 text-center" 
-                numberOfLines={1} 
-                ellipsizeMode="tail"
-              >
-                Computer Science
-              </Text>
-            </View>
-          </View>
-        </View>
+  const getUserRole = (role: number): string => {
+    return role >= 1 ? 'Staff' : 'Student';
+  };
 
-        <View className="p-6">
-          <Text className="text-lg font-psemibold mb-4">Recent Check-ins</Text>
-          <CheckInLog checkIns={mockCheckIns} />
-        </View>
-      </ScrollView>
-
-      <View className="p-6 bg-white border-t border-gray-100">
-        <TouchableOpacity
-          onPress={handleLogout}
-          className="bg-red-500 p-4 rounded-xl items-center"
-          activeOpacity={0.7}
-        >
-          <Text className="text-white font-psemibold">Log Out</Text>
-        </TouchableOpacity>
+  if (loading) {
+    return (
+      <View className="flex-1 justify-center items-center bg-white">
+        <ActivityIndicator size="large" color="#8A2BE2" />
       </View>
+    );
+  }
+
+  return (
+    <SafeAreaView className="flex-1 bg-white">
+      <ScrollView className="flex-1 px-6">
+        {/* Header */}
+        <View className="items-center pt-8 pb-6">
+          <View className="bg-purple-100 rounded-full p-6 mb-4">
+          {<AntDesign name="user" size={48} color="#8A2BE2" />}
+          </View>
+          <Text className="text-2xl font-bold text-center">
+            {`${userData.first_name} ${userData.last_name}`}
+          </Text>
+          <View className="bg-purple-100 px-4 py-2 rounded-full mt-2">
+            <Text className="text-purple-700 font-medium">
+              {getUserRole(userData.role)}
+            </Text>
+          </View>
+        </View>
+
+        {/* Profile Information */}
+        <View className="mb-8">
+          <Text className="text-lg font-bold mb-4">Profile Information</Text>
+          
+          <ProfileCard
+            icon={<Entypo name="email" size={24} color="#8A2BE2" />}
+            title="Email"
+            value={userData.email}
+          />
+          
+          <ProfileCard
+            icon={<AntDesign name="infocirlce" size={24} color="#8A2BE2" />}
+            title="First Name"
+            value={userData.first_name}
+          />
+          
+          <ProfileCard
+            icon={<AntDesign name="infocirlce" size={24} color="#8A2BE2" />}
+            title="Last Name"
+            value={userData.last_name}
+          />
+          
+        </View>
+
+        {/* Logout Button */}
+        <TouchableOpacity
+          onPress={showLogoutConfirmation}
+          className="bg-red-500 rounded-xl py-4 px-6 mb-8"
+        >
+          <View className="flex-row items-center justify-center">
+          <AntDesign name="logout" size={24} color="white" />
+            <Text className="text-white font-bold text-lg ml-2">
+              Logout
+            </Text>
+          </View>
+        </TouchableOpacity>
+      </ScrollView>
     </SafeAreaView>
   );
 };
