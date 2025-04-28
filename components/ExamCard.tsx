@@ -10,7 +10,7 @@ export interface Room {
   location: string;
 }
 
-interface ExamCardProps {
+export interface ExamCardProps {
   id: string;
   title: string;
   description: string | null;
@@ -21,6 +21,7 @@ interface ExamCardProps {
   seat: string;
   room_name: string;
   room_location: string;
+  isAdmin?: boolean;
 }
 
 const backgroundImage = require('../assets/images/cal.png')

@@ -1,5 +1,5 @@
 import { View, Text, FlatList, Image, RefreshControl, ActivityIndicator, Pressable, Alert } from 'react-native'
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { images } from '../../constants'
 import SearchInput from '@/components/SearchInput'
@@ -18,7 +18,15 @@ const Exams = () => {
   const [exams, setExams] = useState<ExamCard2Props[]>([])
   const [loading, setLoading] = useState(true)
   const [token, setToken] = useState<string | null>(null)
+  const [filteredExams, setFilteredExams] = useState<ExamCard2Props[]>([]);
 
+    const handleSearchSubmit = useCallback((searchText: string) => {
+    const filtered = exams.filter(exam =>
+      exam.title.toLowerCase().includes(searchText.toLowerCase())
+    );
+    setFilteredExams(filtered);
+  }, [exams]);
+  
   useEffect(() => {
     checkAuthAndFetchExams()
   }, [])
@@ -67,6 +75,7 @@ const Exams = () => {
 
       const data = await response.json()
       setExams(data)
+      setFilteredExams(data)
     } catch (error) {
       console.error('Error fetching exams:', error)
       Alert.alert('Error', 'Failed to load exams')
@@ -94,7 +103,7 @@ const Exams = () => {
   return (
     <SafeAreaView className="bg-primary flex-1">
       <FlatList
-        data={exams}
+        data={filteredExams}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
           <ExamCard2
@@ -122,7 +131,9 @@ const Exams = () => {
               </View>
             </View>
 
-            <SearchInput />
+            <SearchInput 
+              onSubmitEditing={handleSearchSubmit}
+            />
 
             <View className="flex-row justify-between items-center mt-5">
               <Text className="text-black text-xl font-bold font-pregular">
@@ -134,7 +145,6 @@ const Exams = () => {
         ListEmptyComponent={() => (
           <EmptyState
             title="No Exams Found"
-            message="Create your first exam by clicking the Add Exam button"
           />
         )}
         refreshControl={

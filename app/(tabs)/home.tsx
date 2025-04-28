@@ -1,5 +1,5 @@
 import { View, Text, FlatList, Image, RefreshControl, ActivityIndicator, Alert } from 'react-native'
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { images } from '../../constants'
 import SearchInput from '@/components/SearchInput'
@@ -29,7 +29,15 @@ const Home = () => {
   const [token, setToken] = useState<string | null>(null)
   // Add user state
   const [user, setUser] = useState<UserData | null>(null)
+  const [filteredExams, setFilteredExams] = useState<ExamCardProps[]>([]);
 
+  const handleSearchSubmit = useCallback((searchText: string) => {
+    const filtered = exams.filter(exam =>
+      exam.title.toLowerCase().includes(searchText.toLowerCase())
+    );
+    setFilteredExams(filtered);
+  }, [exams]);
+  
   useEffect(() => {
     checkAuthAndFetchData()
   }, [])
@@ -103,9 +111,9 @@ const Home = () => {
         return
       }
   
-      // If response is 404 (Not Found) or 204 (No Content), set empty array
       if (response.status === 404 || response.status === 204) {
         setExams([])
+        setFilteredExams([]) // Also set filtered exams
         return
       }
   
@@ -114,15 +122,15 @@ const Home = () => {
       }
   
       const data = await response.json()
-      // If the response is successful but empty, set empty array
       setExams(data || [])
+      setFilteredExams(data || []) // Initialize filtered exams with all exams
     } catch (error) {
       console.error('Error fetching exams:', error)
-      // Only show alert for actual errors, not for empty results
       if (error instanceof Error && error.message !== 'Failed to fetch exams') {
         Alert.alert('Error', 'Failed to load exams')
       }
-      setExams([]) // Set empty array on error to show EmptyState
+      setExams([])
+      setFilteredExams([])
     } finally {
       setLoading(false)
     }
@@ -153,7 +161,7 @@ const Home = () => {
   return (
     <SafeAreaView className="bg-primary flex-1">
       <FlatList
-        data={exams}
+        data={filteredExams}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
           <ExamCard
@@ -182,7 +190,9 @@ const Home = () => {
               </View>
             </View>
 
-            <SearchInput />
+            <SearchInput 
+              onSubmitEditing={handleSearchSubmit}
+            />
 
             <View className="flex-row justify-between items-center mt-5">
               <Text className="text-black text-xl font-bold font-pregular">
