@@ -2,7 +2,7 @@
 
 // python manage.py runserver 0.0.0.0:8000     
 
-const DEV_BASE_URL = 'http://172.20.10.11:8000'
+const DEV_BASE_URL = 'http://192.168.0.101:8000'
 const PROD_BASE_URL = 'https://your-production-url.com'
 const STAGING_BASE_URL = 'https://your-staging-url.com'
 

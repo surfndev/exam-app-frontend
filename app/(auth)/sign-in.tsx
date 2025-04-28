@@ -8,7 +8,7 @@ import { router } from 'expo-router'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { API_CONFIG, createApiUrl } from '@/config'
 
-
+//python manage.py runserver 0.0.0.0:8000
 //const BASE_URL = 'http://192.168.0.101:8000'
 //const API_URL = `${BASE_URL}/api/v1`
 

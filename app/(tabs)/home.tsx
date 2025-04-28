@@ -7,7 +7,7 @@ import Trending from '@/components/Trending'
 import EmptyState from '@/components/EmptyState'
 import ExamCard from '@/components/ExamCard'
 import { loadExams } from '../../utils/loadExams';
-import type { ExamCardProps } from '@/components/ExamCard'
+import { ExamCardProps } from '@/components/ExamCard'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { router } from 'expo-router'
 import { createApiUrl } from '@/config'
